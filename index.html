@@ -159,12 +159,37 @@ function extractUrls(obj, found = []) {
   if (Array.isArray(obj)) { obj.forEach(v => extractUrls(v, found)); return found; }
   for (const [k, v] of Object.entries(obj)) {
     if ((k === "url" || k === "file") && typeof v === "string" && v.startsWith("http")) {
-      if (!isSub(v)) found.push(v);
+      if (!isSub(v)) found.push(transformUrl(v));
     } else {
       extractUrls(v, found);
     }
   }
   return found;
+}
+
+// ── URL transformer ───────────────────────────────────────────────────────────
+// For goodstream.cc:
+//   /streamsvr/{id}/anything  →  /embed/{id}
+//   /pl/{id}/anything         →  /embed/{id}
+// Rule: replace /streamsvr/ or /pl/ with /embed/, then strip everything after the 5th slash.
+// URL structure:  https://goodstream.cc / streamsvr / {id} / extra?params
+//                 slash:               1           2      3    4 ...  (counting from schema-less)
+// Counting slashes in full URL: https://goodstream.cc/streamsvr/id/extra
+//   parts[0]=https:  parts[1]=  parts[2]=goodstream.cc  parts[3]=streamsvr  parts[4]=id  parts[5]=extra
+// We want parts[0]+//+parts[2]+/embed/+parts[4]  (keep only up to 5th slash = index 4 segment)
+function transformUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "goodstream.cc") {
+      // Split pathname into segments, filter empty strings from leading slash
+      const segs = u.pathname.split("/").filter(Boolean);
+      // segs[0] = "streamsvr" or "pl" or something else, segs[1] = id
+      if ((segs[0] === "streamsvr" || segs[0] === "pl") && segs[1]) {
+        return `${u.protocol}//${u.hostname}/embed/${segs[1]}`;
+      }
+    }
+  } catch {}
+  return url; // return unchanged if not matched
 }
 
 // ── Proxy negotiation ─────────────────────────────────────────────────────────
