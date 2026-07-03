@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+  // GitHub Pages 404 trick: capture the path and redirect to index.html
+  // preserving the path as a query string so index.html can read it
+  var path = window.location.pathname;
+  var base = '/vidnest'; // your repo name
+  var route = path.replace(base, '') || '/';
+  // Redirect to index with the route stored in ?r=
+  window.location.replace(base + '/?r=' + encodeURIComponent(route) + window.location.hash);
+</script>
+</head>
+<body></body>
+</html>
