@@ -1,75 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidNest Resolver</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', monospace; min-height: 100vh; padding: 20px; }
-  h1 { text-align: center; color: #7c6aff; margin-bottom: 24px; font-size: 1.6rem; letter-spacing: 2px; }
-  .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 24px; }
-  input, select { background: #1a1a2e; border: 1px solid #333; color: #e0e0e0; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; outline: none; }
-  input:focus, select:focus { border-color: #7c6aff; }
-  button { background: #7c6aff; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s; }
-  button:hover { background: #5a48d4; }
-  button:disabled { background: #444; cursor: not-allowed; }
-  #log { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; min-height: 80px; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin-bottom: 20px; max-height: 260px; overflow-y: auto; }
-  .results { display: flex; flex-direction: column; gap: 14px; }
-  .server-card { background: #161625; border: 1px solid #2a2a3d; border-radius: 10px; padding: 14px 18px; }
-  .server-title { font-weight: 700; color: #7c6aff; margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .badge { font-size: 0.7rem; background: #2a2a3d; border-radius: 4px; padding: 2px 7px; color: #aaa; font-weight: 400; }
-  .stream-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1e1e30; flex-wrap: wrap; }
-  .stream-row:last-child { border-bottom: none; }
-  .stream-url { font-size: 0.78rem; color: #a0d4ff; flex: 1; word-break: break-all; min-width: 0; }
-  .copy-btn { background: #2a2a3d; color: #ccc; border: none; border-radius: 5px; padding: 4px 10px; font-size: 0.72rem; cursor: pointer; white-space: nowrap; }
-  .copy-btn:hover { background: #7c6aff; color: #fff; }
-  .play-btn { background: #1a3a1a; color: #6dff6d; border: none; border-radius: 5px; padding: 4px 10px; font-size: 0.72rem; cursor: pointer; white-space: nowrap; }
-  .play-btn:hover { background: #2a5a2a; }
-  .err { color: #ff6d6d; }
-  .ok  { color: #6dff6d; }
-  .warn { color: #ffb86c; }
-  .tag-hls  { color: #ffb86c; font-size: 0.7rem; background: #2a1f0a; border-radius: 4px; padding: 1px 6px; }
-  .tag-mp4  { color: #50fa7b; font-size: 0.7rem; background: #0a2a14; border-radius: 4px; padding: 1px 6px; }
-  .tag-dash { color: #8be9fd; font-size: 0.7rem; background: #0a1f2a; border-radius: 4px; padding: 1px 6px; }
-  .summary  { text-align: center; color: #aaa; font-size: 0.85rem; margin-bottom: 10px; }
-  .proxy-status { text-align: center; font-size: 0.75rem; color: #555; margin-bottom: 14px; }
-  .proxy-status span { color: #7c6aff; }
-  #player-wrap { display: none; background: #111; border: 1px solid #333; border-radius: 10px; padding: 14px; margin-bottom: 20px; }
-  #player-wrap h3 { color: #7c6aff; margin-bottom: 10px; font-size: 0.9rem; }
-  video { width: 100%; border-radius: 8px; max-height: 360px; background: #000; }
-  #player-url { font-size: 0.7rem; color: #555; word-break: break-all; margin-top: 6px; }
-</style>
+<title>VidNest API</title>
 </head>
 <body>
-
-<h1>⚡ VidNest Resolver</h1>
-
-<div class="controls">
-  <input id="tmdb"    type="number" placeholder="TMDB ID" value="254" style="width:160px"/>
-  <select id="mtype">
-    <option value="movie">Movie</option>
-    <option value="tv">TV Show</option>
-  </select>
-  <input id="season"  type="number" placeholder="Season"  value="1" style="width:85px"/>
-  <input id="episode" type="number" placeholder="Episode" value="1" style="width:85px"/>
-  <button id="resolveBtn" onclick="resolve()">Resolve</button>
-  <button onclick="clearAll()" style="background:#333">Clear</button>
-</div>
-
-<div class="proxy-status" id="proxyStatus">Proxy: <span>not tested</span></div>
-<div id="log">Ready. Enter a TMDB ID and click Resolve.</div>
-
-<div id="player-wrap">
-  <h3>▶ Native Player (MP4 only)</h3>
-  <video id="player" controls></video>
-  <div id="player-url"></div>
-</div>
-
-<div class="summary" id="summary"></div>
-<div class="results" id="results"></div>
-
 <script>
+// ═══════════════════════════════════════════════════════════════════
+//  VidNest JSON API
+//  Usage:
+//    Movie : /api.html?type=movie&id=254
+//    TV    : /api.html?type=tv&id=3119&season=1&episode=5
+//
+//  Response (JSON):
+//  {
+//    "status": "ok",
+//    "query": { "type": "movie", "id": "254" },
+//    "proxy": "corsproxy.io",
+//    "total": 8,
+//    "streams": [
+//      {
+//        "server": "alfa",
+//        "status": "ok",
+//        "streams": [
+//          { "url": "https://...", "type": "hls" },
+//          ...
+//        ]
+//      },
+//      {
+//        "server": "gama",
+//        "status": "error",
+//        "error": "HTTP 403",
+//        "streams": []
+//      }
+//    ]
+//  }
+// ═══════════════════════════════════════════════════════════════════
+
 const ALPHA = "RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/=";
 
 const SERVERS = {
@@ -99,31 +66,7 @@ const SUBTITLE_EXTS  = [".vtt",".srt",".ass",".ssa"];
 
 let activeProxy = null;
 
-// ── GitHub Pages URL Router ───────────────────────────────────────────────────
-// When user visits /vidnest/movie/254, GitHub Pages serves 404.html
-// which redirects to /vidnest/?r=%2Fmovie%2F254
-// Here we read that ?r= param and parse it.
-function parseRoute() {
-  const params = new URLSearchParams(window.location.search);
-  const r = params.get("r"); // e.g. "/movie/254" or "/tv/3119/1/5"
-
-  if (r) {
-    // movie route: /movie/254
-    const movieMatch = r.match(/^\/movie\/(\d+)/);
-    if (movieMatch) {
-      return { mtype: "movie", tmdb: movieMatch[1], season: "1", episode: "1" };
-    }
-    // tv route: /tv/3119/1/5
-    const tvMatch = r.match(/^\/tv\/(\d+)\/(\d+)\/(\d+)/);
-    if (tvMatch) {
-      return { mtype: "tv", tmdb: tvMatch[1], season: tvMatch[2], episode: tvMatch[3] };
-    }
-  }
-
-  return null; // no route found, show normal UI
-}
-
-// ── Decoder ───────────────────────────────────────────────────────────────────
+// ── Decoder ───────────────────────────────────────────────────────
 function decode(data) {
   const val = {};
   for (let i = 0; i < ALPHA.length; i++) val[ALPHA[i]] = i;
@@ -139,7 +82,7 @@ function decode(data) {
   return JSON.parse(new TextDecoder().decode(new Uint8Array(out)));
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 function isSub(url) {
   const u = url.toLowerCase();
   return SUBTITLE_HOSTS.some(h => u.includes(h)) ||
@@ -152,6 +95,19 @@ function detectType(url) {
   if (u.endsWith(".mpd"))  return "dash";
   if (u.endsWith(".webm")) return "webm";
   return "hls";
+}
+
+function transformUrl(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "goodstream.cc") {
+      const segs = u.pathname.split("/").filter(Boolean);
+      if ((segs[0] === "streamsvr" || segs[0] === "pl") && segs[1]) {
+        return `${u.protocol}//${u.hostname}/embed/${segs[1]}`;
+      }
+    }
+  } catch {}
+  return url;
 }
 
 function extractUrls(obj, found = []) {
@@ -167,32 +123,7 @@ function extractUrls(obj, found = []) {
   return found;
 }
 
-// ── URL transformer ───────────────────────────────────────────────────────────
-// For goodstream.cc:
-//   /streamsvr/{id}/anything  →  /embed/{id}
-//   /pl/{id}/anything         →  /embed/{id}
-// Rule: replace /streamsvr/ or /pl/ with /embed/, then strip everything after the 5th slash.
-// URL structure:  https://goodstream.cc / streamsvr / {id} / extra?params
-//                 slash:               1           2      3    4 ...  (counting from schema-less)
-// Counting slashes in full URL: https://goodstream.cc/streamsvr/id/extra
-//   parts[0]=https:  parts[1]=  parts[2]=goodstream.cc  parts[3]=streamsvr  parts[4]=id  parts[5]=extra
-// We want parts[0]+//+parts[2]+/embed/+parts[4]  (keep only up to 5th slash = index 4 segment)
-function transformUrl(url) {
-  try {
-    const u = new URL(url);
-    if (u.hostname === "goodstream.cc") {
-      // Split pathname into segments, filter empty strings from leading slash
-      const segs = u.pathname.split("/").filter(Boolean);
-      // segs[0] = "streamsvr" or "pl" or something else, segs[1] = id
-      if ((segs[0] === "streamsvr" || segs[0] === "pl") && segs[1]) {
-        return `${u.protocol}//${u.hostname}/embed/${segs[1]}`;
-      }
-    }
-  } catch {}
-  return url; // return unchanged if not matched
-}
-
-// ── Proxy negotiation ─────────────────────────────────────────────────────────
+// ── Proxy negotiation ─────────────────────────────────────────────
 async function probeProxy(proxy) {
   const testUrl = "https://new.vidnest.fun/moviesapi/movie/254";
   try {
@@ -204,179 +135,126 @@ async function probeProxy(proxy) {
 }
 
 async function findProxy() {
-  setProxyStatus("searching…", "#ffb86c");
   for (const proxy of PROXY_LIST) {
-    log(`  Trying proxy: ${proxy.name} ...`, "warn");
     const ok = await probeProxy(proxy);
-    if (ok) {
-      activeProxy = proxy;
-      setProxyStatus(`✓ ${proxy.name}`, "#6dff6d");
-      log(`  ✓ Using proxy: ${proxy.name}\n`, "ok");
-      return true;
-    } else {
-      log(`  ✗ ${proxy.name} failed`, "err");
-    }
+    if (ok) { activeProxy = proxy; return true; }
   }
-  setProxyStatus("✗ all proxies failed", "#ff6d6d");
-  log(`\n  ✗ All proxies failed. Cannot fetch streams.\n`, "err");
   return false;
 }
 
-function setProxyStatus(msg, color) {
-  document.getElementById("proxyStatus").innerHTML = `Proxy: <span style="color:${color}">${msg}</span>`;
-}
-
-// ── Fetch one server ──────────────────────────────────────────────────────────
-async function fetchServer(name, backend, path) {
+// ── Fetch one server ──────────────────────────────────────────────
+async function fetchServer(backend, path) {
   const target = `https://new.vidnest.fun/${backend}/${path}`;
-  const url    = activeProxy.wrap(target);
-  const r = await fetch(url, { signal: AbortSignal.timeout(14000) });
+  const r = await fetch(activeProxy.wrap(target), { signal: AbortSignal.timeout(14000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const raw = await r.json();
-  const enc = raw?.data;
-  if (!enc) throw new Error("no data field");
-  const payload = decode(enc);
-  return extractUrls(payload);
+  if (!raw?.data) throw new Error("no data field");
+  return extractUrls(decode(raw.data));
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function log(msg, cls = "") {
-  const el = document.getElementById("log");
-  el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
-  el.scrollTop = el.scrollHeight;
+// ── Output helpers ────────────────────────────────────────────────
+function sendJSON(obj) {
+  // Render JSON prettily in the page so browser treats it as an API response
+  document.open();
+  document.write('<pre style="font-family:monospace;font-size:14px;padding:20px;background:#0f0f0f;color:#e0e0e0;min-height:100vh;margin:0">' +
+    JSON.stringify(obj, null, 2) + '</pre>');
+  document.close();
 }
 
-function clearAll() {
-  document.getElementById("log").textContent = "Ready.";
-  document.getElementById("results").innerHTML = "";
-  document.getElementById("summary").textContent = "";
-  document.getElementById("player-wrap").style.display = "none";
-  activeProxy = null;
-  setProxyStatus("not tested", "#555");
-}
+// ── Main ──────────────────────────────────────────────────────────
+async function main() {
+  const params  = new URLSearchParams(window.location.search);
+  // Also support ?r= route from 404.html redirect
+  const r       = params.get("r");
+  let type, id, season, episode;
 
-function renderCard(name, urls, err) {
-  const wrap = document.getElementById("results");
-  const card = document.createElement("div");
-  card.className = "server-card";
-  if (err) {
-    card.innerHTML = `<div class="server-title">${name}<span class="badge" style="color:#ff6d6d">✗ ${err}</span></div>`;
+  if (r) {
+    // Route from 404.html: /movie/254 or /tv/3119/1/5
+    const movieMatch = r.match(/^\/movie\/(\d+)/);
+    const tvMatch    = r.match(/^\/tv\/(\d+)\/(\d+)\/(\d+)/);
+    if (movieMatch) { type = "movie"; id = movieMatch[1]; season = "1"; episode = "1"; }
+    else if (tvMatch) { type = "tv"; id = tvMatch[1]; season = tvMatch[2]; episode = tvMatch[3]; }
   } else {
-    const rows = urls.map(u => {
-      const t = detectType(u);
-      const tagClass = t === "mp4" ? "tag-mp4" : t === "dash" ? "tag-dash" : "tag-hls";
-      const playBtn  = t === "mp4"
-        ? `<button class="play-btn" onclick="playMp4('${u}')">▶ Play</button>`
-        : `<button class="play-btn" onclick="copyHls('${u}')">▶ Copy</button>`;
-      return `<div class="stream-row">
-        <span class="${tagClass}">${t.toUpperCase()}</span>
-        <span class="stream-url">${u}</span>
-        <button class="copy-btn" onclick="copyUrl('${u}')">Copy</button>
-        ${playBtn}
-      </div>`;
-    }).join("");
-    card.innerHTML = `<div class="server-title">${name}<span class="badge" style="color:#6dff6d">✓ ${urls.length} stream(s)</span></div>${rows || '<span style="color:#555;font-size:0.8rem">no streams extracted</span>'}`;
-  }
-  wrap.appendChild(card);
-}
-
-function copyUrl(url) {
-  navigator.clipboard.writeText(url).catch(() => prompt("Copy this URL:", url));
-}
-function copyHls(url) {
-  navigator.clipboard.writeText(url).catch(() => {});
-  alert("HLS URL copied!\nPaste into VLC → Media → Open Network Stream.\n\n" + url);
-}
-function playMp4(url) {
-  const wrap = document.getElementById("player-wrap");
-  const vid  = document.getElementById("player");
-  vid.src = url;
-  document.getElementById("player-url").textContent = url;
-  wrap.style.display = "block";
-  vid.play();
-  wrap.scrollIntoView({ behavior: "smooth" });
-}
-
-// ── Main resolve ──────────────────────────────────────────────────────────────
-async function resolve() {
-  const tmdb    = document.getElementById("tmdb").value.trim();
-  const mtype   = document.getElementById("mtype").value;
-  const season  = document.getElementById("season").value;
-  const episode = document.getElementById("episode").value;
-  if (!tmdb) { alert("Enter a TMDB ID"); return; }
-
-  document.getElementById("resolveBtn").disabled = true;
-  document.getElementById("results").innerHTML   = "";
-  document.getElementById("summary").textContent = "";
-  document.getElementById("log").textContent     = "";
-  document.getElementById("player-wrap").style.display = "none";
-
-  if (!activeProxy) {
-    const found = await findProxy();
-    if (!found) { document.getElementById("resolveBtn").disabled = false; return; }
+    type    = params.get("type") || params.get("t");
+    id      = params.get("id")   || params.get("tmdb");
+    season  = params.get("season")  || params.get("s") || "1";
+    episode = params.get("episode") || params.get("e") || "1";
   }
 
-  const path = mtype === "movie"
-    ? `movie/${tmdb}`
-    : `tv/${tmdb}/${season}/${episode}`;
+  // ── Validate ──
+  if (!id || !type) {
+    return sendJSON({
+      status: "error",
+      error: "Missing required parameters",
+      usage: {
+        movie: "?type=movie&id=254",
+        tv:    "?type=tv&id=3119&season=1&episode=5",
+        short: "?t=movie&id=254  or  ?t=tv&id=3119&s=1&e=5"
+      }
+    });
+  }
+  if (!["movie","tv"].includes(type)) {
+    return sendJSON({ status: "error", error: "type must be 'movie' or 'tv'" });
+  }
 
-  log(`\nResolving TMDB ${tmdb} [${mtype}]${mtype === "tv" ? " S"+season+"E"+episode : ""} via ${activeProxy.name}...\n`);
+  const path = type === "movie"
+    ? `movie/${id}`
+    : `tv/${id}/${season}/${episode}`;
 
-  let total = 0;
+  const query = type === "movie"
+    ? { type, id }
+    : { type, id, season, episode };
 
+  // ── Find proxy ──
+  const proxyFound = await findProxy();
+  if (!proxyFound) {
+    return sendJSON({ status: "error", error: "All CORS proxies failed. Try again later.", query });
+  }
+
+  // ── Fetch all servers in parallel ──
   const jobs = Object.entries(SERVERS).map(async ([name, backend]) => {
     try {
-      const urls = await fetchServer(name, backend, path);
-      total += urls.length;
-      log(`  [${name.padEnd(8)}] ✓ ${urls.length} url(s)`, "ok");
-      urls.forEach(u => log(`             ${u}`));
-      renderCard(name, urls, null);
+      const urls = await fetchServer(backend, path);
+      return {
+        server:  name,
+        status:  "ok",
+        streams: urls.map(url => ({ url, type: detectType(url) }))
+      };
     } catch (e) {
+      // One retry on network/proxy error
       if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
-        log(`  [${name.padEnd(8)}] ✗ proxy error — retrying...`, "warn");
         activeProxy = null;
-        const found = await findProxy();
-        if (found) {
+        const retryOk = await findProxy();
+        if (retryOk) {
           try {
-            const urls = await fetchServer(name, backend, path);
-            total += urls.length;
-            log(`  [${name.padEnd(8)}] ✓ ${urls.length} url(s) (retry ok)`, "ok");
-            urls.forEach(u => log(`             ${u}`));
-            renderCard(name, urls, null);
-            return;
+            const urls = await fetchServer(backend, path);
+            return {
+              server:  name,
+              status:  "ok",
+              streams: urls.map(url => ({ url, type: detectType(url) }))
+            };
           } catch (e2) {
-            log(`  [${name.padEnd(8)}] ✗ retry failed: ${e2.message}`, "err");
-            renderCard(name, [], e2.message);
-            return;
+            return { server: name, status: "error", error: e2.message, streams: [] };
           }
         }
       }
-      log(`  [${name.padEnd(8)}] ✗ ${e.message}`, "err");
-      renderCard(name, [], e.message);
+      return { server: name, status: "error", error: e.message, streams: [] };
     }
   });
 
-  await Promise.all(jobs);
-  log(`\nDone — ${total} stream(s) found`);
-  document.getElementById("summary").textContent =
-    `✓ ${total} total stream(s) across all servers  |  proxy: ${activeProxy?.name ?? "none"}`;
-  document.getElementById("resolveBtn").disabled = false;
+  const results = await Promise.all(jobs);
+  const total   = results.reduce((n, r) => n + r.streams.length, 0);
+
+  sendJSON({
+    status: "ok",
+    query,
+    proxy: activeProxy?.name ?? "unknown",
+    total,
+    streams: results
+  });
 }
 
-// ── Boot: auto-resolve from URL if route detected ─────────────────────────────
-(function boot() {
-  const route = parseRoute();
-  if (route) {
-    document.getElementById("tmdb").value    = route.tmdb;
-    document.getElementById("mtype").value   = route.mtype;
-    document.getElementById("season").value  = route.season;
-    document.getElementById("episode").value = route.episode;
-    document.getElementById("log").textContent =
-      `Auto-resolving from URL: [${route.mtype}] TMDB ${route.tmdb}` +
-      (route.mtype === "tv" ? ` S${route.season}E${route.episode}` : "") + "\n";
-    resolve();
-  }
-})();
+main();
 </script>
 </body>
 </html>
